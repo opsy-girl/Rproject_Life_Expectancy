@@ -1,0 +1,73 @@
+#2.1 Divide dataset into 80/20 using kfold. Train using LR, NB and DT 
+library(caret)
+library(e1071)
+library(rpart)
+library(ggplot2)
+library(readr)
+
+# Dataset smr
+data <- read_csv("R Studio/smr_diabetes.csv")
+View(data)
+
+ # Convert outcome to a factor 
+data$Outcome <- as.factor(data$Outcome)
+
+# Split 80/20 training and test sets
+set.seed(123)  
+index <- createDataPartition(data$Outcome, p = 0.8, list = FALSE)
+train_data <- data[index, ]
+test_data <- data[-index, ]
+
+# Define the classification algorithms
+# glm (Generalized Linear Model) is "Logistic Regression." 
+#rpart is "Decision Trees."
+algorithms <- c("glm", "naive_bayes", "rpart")
+
+model_results <- list()
+
+# 10-fold cross-validation and model training
+train_and_evaluate <- function(model, algorithm_name) {
+  set.seed(123)  
+  ctrl <- trainControl(method = "cv", number = 10)
+  result <- train(Outcome ~ ., data = train_data, method = model, trControl = ctrl)
+  return(list(algorithm = algorithm_name, model = result))}
+
+# Train models and store results in the list
+for (algorithm in algorithms) 
+
+#2.2 Plot the accuracy bar graphs for all 3, advise the best model. 
+Provide aggregated confusion matrix.
+
+
+#2.3 Develop ensemble algorithm from all 3, compare average accuracy, 
+#elaborate on the implementation of all 3 (10 mks)
+# Initialize an empty data frame with the same number of rows as the test data
+ensemble_predictions <- data.frame(Ensemble = character(nrow(test_data)))
+
+# Loop through each algorithm and make predictions on the test set
+for (algorithm in algorithms) {
+  # Predict using the model for the current algorithm
+  predictions <- predict(model_results[[algorithm]]$model, test_data)
+  
+ # Store the predictions in the ensemble_predictions data frame
+  ensemble_predictions[[algorithm]] <- as.character(predictions)
+}
+
+# Function to perform majority voting
+majority_vote <- function(row) {
+  names(sort(table(row), decreasing = TRUE)[1])
+}
+
+# Applying majority voting row-wise to get ensemble predictions
+ensemble_predictions$Ensemble <- apply(ensemble_predictions[, -1], 1, majority_vote)
+
+# Converting "Ensemble" column to a factor
+ensemble_predictions$Ensemble <- as.factor(ensemble_predictions$Ensemble)
+
+# Calculate accuracy for the ensemble model on the test set
+ensemble_accuracy <- mean(ensemble_predictions$Ensemble == test_data$Outcome)
+
+cat("Accuracy of the Ensemble Model:", ensemble_accuracy, "\n")
+
+
+
