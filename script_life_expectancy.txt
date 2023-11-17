@@ -1,0 +1,93 @@
+library(lubridate)
+library(forecast)
+library(readr)
+library(ggplot2)
+
+#1.1 Preload dataset and plot time series.
+#Loading dataset
+saws_time_series_datasets <- read_csv("R Studio/saws_time_series_datasets.csv")
+View(saws_time_series_datasets)
+
+saws_time_series_datasets$Date <- ymd(saws_time_series_datasets$Date)
+
+ggplot(saws_time_series_datasets, aes(x = Date, y = Temp)) +
+  geom_line() +
+  labs(x = "Date", y = "Temperature (C)") +
+  ggtitle("SAWS Temperature Time Series")
+
+
+#1.2 Divide dataset to test and train, build ARIMA model for daily minimum 
+#temperature forecasting. Estimate the best model using AIC.
+library(forecast)
+# Split the training (80%) and test (20%) 
+train_size <- floor(0.8 * nrow(saws_time_series_datasets))
+train_data <- saws_time_series_datasets[1:train_size, ]
+test_data <- saws_time_series_datasets[(train_size + 1):nrow(saws_time_series_datasets), ]
+
+# Fit an ARIMA model using auto.arima
+best_model <- auto.arima(train_data$Temp)
+
+# Print the best model's order and AIC
+print(best_model)
+cat("AIC of the best model:", best_model$aic, "\n")
+
+
+
+#1.3 Provide two time-series plots of the training set and test set, including 
+#the forecasted models, and provide the mean sum of squares error estimates 
+#for both forecasts.
+# Forecast using the best model on the test dataset
+
+forecast_values <- forecast(best_model, h = nrow(test_data))
+print(forecast_values)
+
+plot(forecast_values, main = "Daily Minimum Temperature : ARIMA Forecast ")
+
+# Forecast test dataset
+forecast_test <- forecast(best_model, h = nrow(test_data))
+
+# Forecast training dataset
+forecast_train <- forecast(best_model, h = nrow(train_data))
+
+# MSE for the test forecast
+mse_test <- mean((forecast_test$mean - test_data$Temp)^2)
+
+# MSE for the training forecast
+mse_train <- mean((forecast_train$mean - train_data$Temp)^2)
+
+# Plot the training set with the training forecast
+plot(train_data$Date, train_data$Temp, type = "l", col = "blue",
+     xlab = "Date", ylab = "Temperature", 
+     main = "Training Set with Forecast")
+
+lines(forecast_train$mean, col = "red", lty = 2)
+
+legend("topleft", legend = c("Training Set", "Training Forecast"), 
+       col = c("blue", "red"), lwd = c(2, 2), lty = c(1, 2), cex = 0.8)
+
+# Plot the test set with the test forecast
+plot(test_data$Date, test_data$Temp, type = "l", col = "blue",
+     xlab = "Date", ylab = "Temperature", 
+     main = "Test Set with Forecast")
+
+lines(forecast_test$mean, col = "red", lty = 2)
+
+legend("topleft", legend = c("Test Set", "Test Forecast"), 
+       col = c("blue", "red"), lwd = c(2, 2), lty = c(1, 2), cex = 0.8)
+
+# Print the MSE for both forecasts
+cat("MSE for the Test Forecast:", mse_test, "\n")
+cat("MSE for the Training Forecast:", mse_train, "\n")
+
+
+# mean squared error for the test forecast
+mse_test <- mean((forecast_values$mean - test_data$Temp)^2)
+print(mse_test)
+
+# Plot the training set, forecast, and test set
+plot(forecast_values, main = "ARIMA Forecast of Daily Minimum Temperature")
+lines(train_data$Date, train_data$Temp, col = "blue", lwd = 2)
+lines(test_data$Date, test_data$Temp, col = "red", lwd = 2)
+
+legend("topleft", legend = c("Training Set", "Test Set", "Forecast"), 
+       col = c("blue", "red", "black"), lwd = c(2, 2, 1), cex = 0.8)
